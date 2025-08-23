@@ -13,20 +13,24 @@
 //! A cluster of nodes will receive write read and write requests only after all nodes reached the state operational.
 //!
 
-use std::{fmt::Display, hash::Hash};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 use hashring::HashRing;
 
-#[derive(PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum State {
     New, //  A node that recently spawned and needs to sync state. It will not receive read requests. It could receive write requests though
     Operational, // A node that stores all required keys and is able to process read and write requests
     Terminating, // Optional state that can be used to sync state from this node to other nodes, before it leaves the cluster
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Node<T>
 where
-    T: Hash,
+    T: Hash + Clone + Debug,
 {
     node: T,
     state: State,
@@ -34,7 +38,7 @@ where
 
 impl<T> Node<T>
 where
-    T: Hash,
+    T: Hash + Clone + Debug,
 {
     fn new(node: T, state: State) -> Node<T> {
         Node { node, state }
@@ -43,7 +47,7 @@ where
 
 impl<T> Hash for Node<T>
 where
-    T: Hash,
+    T: Hash + Clone + Debug,
 {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.node.hash(state);
@@ -51,7 +55,8 @@ where
 }
 
 pub struct Config {
-    pub virtual_nodes: i32, // number of virtual nodes to create per real node
+    pub virtual_nodes: usize, // number of virtual nodes to create per real node
+    pub replicas: usize,      // number of replicas to create for each entry
 }
 
 #[derive(Debug)]
@@ -76,7 +81,7 @@ impl Display for Error {
 /// it can be combined with the Coordinator of another deployment to calculate actions needed to sync the state between both deployments (clusters)
 pub struct Coordinator<T>
 where
-    T: Hash,
+    T: Hash + Clone + Debug,
 {
     config: Config,
     ring: HashRing<Node<T>>,
@@ -85,7 +90,7 @@ where
 
 impl<T> Coordinator<T>
 where
-    T: Hash,
+    T: Hash + Clone + Debug,
 {
     /// initiate a new Coordinator
     pub fn new(config: Config) -> Coordinator<T> {
@@ -101,6 +106,8 @@ where
     pub fn update(&mut self, nodes: Vec<Node<T>>) {
         let mut ring = HashRing::default();
         let operational = nodes.iter().all(|n| n.state == State::Operational);
+
+        // TODO: add virtual nodes instead, take config.virtual_nodes into account
         ring.batch_add(nodes);
 
         // TODO: publish actions based on the differences of the new and the current ring
@@ -117,7 +124,12 @@ where
             return Err(Error::ClusterNotOperational);
         }
 
-        todo!()
+        let targets = self
+            .ring
+            .get_with_replicas(&key, self.config.replicas)
+            .map_or(vec![], |r| r);
+
+        Ok(targets)
     }
 }
 
@@ -126,8 +138,11 @@ mod tests {
     use crate::{Config, Coordinator, Node, State};
 
     #[test]
-    fn new_deployment() {
-        let config = Config { virtual_nodes: 3 };
+    fn new_deployment_should_not_be_operational() {
+        let config = Config {
+            virtual_nodes: 3,
+            replicas: 2,
+        };
         let mut coordinator = Coordinator::new(config);
 
         let node1 = Node::new("1", State::New);
@@ -143,6 +158,28 @@ mod tests {
             _ => panic!(
                 "coordinator should throw Error::ClusterNotOperational if cluster has not been operational yet"
             ),
+        }
+    }
+
+    #[test]
+    fn new_deployment_is_operational_if_all_nodes_are_operational() {
+        let config = Config {
+            virtual_nodes: 3,
+            replicas: 1,
+        };
+        let mut coordinator = Coordinator::new(config);
+
+        let node1 = Node::new("1", State::Operational);
+        let node2 = Node::new("2", State::Operational);
+        let node3 = Node::new("3", State::Operational);
+
+        coordinator.update(vec![node1.clone(), node2.clone(), node3.clone()]);
+
+        let targets = coordinator.get("1234");
+
+        match targets {
+            Ok(targets) => assert_eq!(targets, vec![node2, node1]),
+            _ => panic!("cluster should be operational"),
         }
     }
 }
