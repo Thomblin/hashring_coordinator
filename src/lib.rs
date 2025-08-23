@@ -63,7 +63,12 @@ impl std::error::Error for Error {}
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        match self {
+            Error::ClusterNotOperational => write!(
+                f,
+                "the cluster is not operational yet. no read/write operations are allowed"
+            ),
+        }
     }
 }
 
