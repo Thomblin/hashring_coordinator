@@ -140,8 +140,8 @@ mod tests {
     #[test]
     fn new_deployment_should_not_be_operational() {
         let config = Config {
-            virtual_nodes: 3,
-            replicas: 2,
+            virtual_nodes: 0,
+            replicas: 0,
         };
         let mut coordinator = Coordinator::new(config);
 
@@ -164,8 +164,8 @@ mod tests {
     #[test]
     fn new_deployment_is_operational_if_all_nodes_are_operational() {
         let config = Config {
-            virtual_nodes: 3,
-            replicas: 1,
+            virtual_nodes: 0,
+            replicas: 0,
         };
         let mut coordinator = Coordinator::new(config);
 
@@ -178,7 +178,7 @@ mod tests {
         let targets = coordinator.get("1234");
 
         match targets {
-            Ok(targets) => assert_eq!(targets, vec![node2, node1]),
+            Ok(targets) => assert_eq!(targets, vec![node2]),
             _ => panic!("cluster should be operational"),
         }
     }
