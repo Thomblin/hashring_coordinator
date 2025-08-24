@@ -13,12 +13,13 @@
 //! A cluster of nodes will receive write read and write requests only after all nodes reached the state operational.
 //!
 
+use std::hash::BuildHasher;
 use std::{
     fmt::{Debug, Display},
     hash::Hash,
 };
 
-use hashring::HashRing;
+use hashring::{DefaultHashBuilder, HashRing};
 
 #[derive(Clone, Debug, PartialEq)]
 enum State {
@@ -85,6 +86,7 @@ where
 {
     config: Config,
     ring: HashRing<Node<T>>,
+    hash_builder: DefaultHashBuilder,
     operational: bool,
 }
 
@@ -94,9 +96,11 @@ where
 {
     /// initiate a new Coordinator
     pub fn new(config: Config) -> Coordinator<T> {
+        let hash_builder = DefaultHashBuilder;
         Self {
             config,
-            ring: HashRing::default(),
+            ring: HashRing::with_hasher(hash_builder.clone()),
+            hash_builder,
             operational: false,
         }
     }
@@ -130,6 +134,13 @@ where
             .map_or(vec![], |r| r);
 
         Ok(targets)
+    }
+
+    pub fn get_hash<H>(&self, input: &H) -> u64
+    where
+        H: Hash,
+    {
+        self.hash_builder.hash_one(input)
     }
 }
 
@@ -177,8 +188,14 @@ mod tests {
 
         let targets = coordinator.get("1234");
 
+        let hash_key = coordinator.get_hash(&"1234".to_string());
+        let hash_node2 = coordinator.get_hash(&node2);
+
         match targets {
-            Ok(targets) => assert_eq!(targets, vec![node2]),
+            Ok(targets) => {
+                assert_eq!(targets, vec![node2]);
+                assert!(hash_key < hash_node2);
+            }
             _ => panic!("cluster should be operational"),
         }
     }
