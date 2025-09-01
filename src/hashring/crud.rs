@@ -40,6 +40,7 @@ where
     }
 
     /// returns all real nodes responsible for `key`
+    ///
     /// Returns an empty array if the ring is empty
     pub fn get<U: Hash>(&self, key: &U) -> Vec<T>
     where
@@ -76,8 +77,7 @@ where
         replica_nodes
     }
 
-    // An internal function for converting a reference to a hashable type into a `u64` which
-    // can be used as a key in the hash ring.
+    /// returns the hash for a given key or node (as used in this HashRing)
     pub fn get_hash<U>(&self, input: U) -> u64
     where
         U: Hash,

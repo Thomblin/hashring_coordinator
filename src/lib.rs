@@ -28,7 +28,7 @@
 //! and `get` for adding a node to the ring, removing a node from the ring, and
 //! getting the node responsible for the provided key.
 //!
-//! original source: https://github.com/jeromefroe/hashring-rs
+//! original source: <https://github.com/jeromefroe/hashring-rs>
 //!
 //! ## Example
 //!
@@ -39,43 +39,100 @@
 //!
 //! ``` rust,no_run
 //! extern crate hashring_coordinator;
-//!
-//! use std::net::{IpAddr, SocketAddr};
+//! use hashring_coordinator::HashRing;
+//! use std::net::IpAddr;
 //! use std::str::FromStr;
 //!
-//! use hashring_coordinator::HashRing;
-//!
-//! #[derive(Debug, Copy, Clone, Hash, PartialEq)]
+//! #[derive(Debug, Clone, Hash, PartialEq)]
 //! struct Node {
 //!     ip: IpAddr,
 //! }
-//!
 //! impl Node {
 //!     fn new(ip: &str) -> Self {
 //!         Node {
-//!             ip: IpAddr::from_str(&ip).unwrap(),
+//!             ip: IpAddr::from_str(ip).unwrap(),
 //!         }
 //!     }
 //! }
-//!
 //! fn main() {
-//!     let mut ring: HashRing<Node> = HashRing::new(2, 200);
+//!     // create a cluster with
+//!     //      1 replication per key (each key is stored on 2 nodes)
+//!     //      2 virtual nodes per real node
+//!     let mut ring: HashRing<Node> = HashRing::new(1, 2);
 //!
-//!     let mut nodes = vec![];
-//!     nodes.push(Node::new("127.0.0.1"));
-//!     nodes.push(Node::new("127.0.0.2"));
-//!     nodes.push(Node::new("127.0.0.3"));
+//!     // add some nodes to the cluster
+//!     let nodes = vec![
+//!         Node::new("127.0.0.1"),
+//!         Node::new("127.0.0.2"),
+//!         Node::new("127.0.0.3"),
+//!     ];
 //!
-//!     for node in nodes {
-//!         ring.add(node);
-//!     }
+//!     ring.batch_add(nodes.clone());
 //!
+//!     // return list of nodes that store the key 'foo'
+//!     // prints [Node { ip: 127.0.0.1 }, Node { ip: 127.0.0.3 }]
 //!     println!("{:?}", ring.get(&"foo"));
-//!     println!("{:?}", ring.get(&"bar"));
-//!     println!("{:?}", ring.get(&"baz"));
+//!
+//!     // return Vec<Replicas> containing hash ranges for each node of the cluster,
+//!     // defining which keys to store or find where
+//!     // the first node in each list can be considered the primary,
+//!     // all following nodes are the replicas for the given hashrange
+//!     // prints
+//!     // [
+//!     //      Replicas {
+//!     //          hash_range: 15043474181722320698..=18446744073709551615,
+//!     //          nodes: [Node { ip: 127.0.0.1 }, Node { ip: 127.0.0.3 }]
+//!     //      },
+//!     //      Replicas {
+//!     //          hash_range: 0..=405901753359583262,                      
+//!     //          nodes: [Node { ip: 127.0.0.1 }, Node { ip: 127.0.0.3 }]
+//!     //      },
+//!     //      Replicas {
+//!     //          hash_range: 405901753359583263..=6291554157536183168,    
+//!     //          nodes: [Node { ip: 127.0.0.1 }, Node { ip: 127.0.0.3 }]
+//!     //      },
+//!     //      Replicas {
+//!     //          hash_range: 6291554157536183169..=7034287380452369431,   
+//!     //          nodes: [Node { ip: 127.0.0.3 }, Node { ip: 127.0.0.2 }]
+//!     //      },
+//!     //      Replicas {
+//!     //          hash_range: 7034287380452369432..=8537067609243575564,   
+//!     //          nodes: [Node { ip: 127.0.0.2 }, Node { ip: 127.0.0.3 }]
+//!     //      },
+//!     //      Replicas {
+//!     //          hash_range: 8537067609243575565..=11006066246803680578,  
+//!     //          nodes: [Node { ip: 127.0.0.2 }, Node { ip: 127.0.0.3 }]
+//!     //      },
+//!     //      Replicas {
+//!     //          hash_range: 11006066246803680579..=15043474181722320697,
+//!      //         nodes: [Node { ip: 127.0.0.3 }, Node { ip: 127.0.0.1 }]
+//!      //      }
+//!     // ]
+//!     println!("{:?}", ring.get_hash_ranges());
+//!
+//!     let mut ring2 = ring.clone();
+//!     let new_node = Node::new("127.0.0.4");
+//!     ring2.add(new_node.clone());
+//!
+//!     // return instructions (hashranges and nodes as given in struct Replicas)
+//!     // to copy/move keys from ring1 to ring2
+//!     // to replicate all keys to new_node that need to be stored there
+//!     // prints
+//!     //  [
+//!     //      Replicas {
+//!     //          hash_range: 11006066246803680579..=12253783648769497289,
+//!     //          nodes: [Node { ip: 127.0.0.3 }, Node { ip: 127.0.0.1 }]
+//!     //      },
+//!     //      Replicas {
+//!     //          hash_range: 7034287380452369432..=11006066246803680578,
+//!     //          nodes: [Node { ip: 127.0.0.2 }, Node { ip: 127.0.0.3 }]
+//!     //      }
+//!     //  ]
+//!     println!("{:?}", ring2.find_sources(&new_node, &ring, &nodes));
 //! }
 //! ```
 
 mod hashring;
 
 pub use hashring::HashRing;
+pub use hashring::coordinator::Replicas;
