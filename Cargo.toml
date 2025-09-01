@@ -7,7 +7,7 @@ license = "MIT"
 repository  = "https://github.com/Thomblin/hashring_coordinator"
 readme = "README.md"
 keywords = ["hashring", "consistent_hashing", "coordinator", "replication", "in_memory_cluster"]
-categories = ["command-line-utilities", "config", "data-structures"]
+categories = ["algorithms", "command-line-utilities", "config", "data-structures", "database-implementations"]
 edition = "2024"
 
 [dependencies]
