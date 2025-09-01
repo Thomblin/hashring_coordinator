@@ -1,202 +1,81 @@
-//! A minimal implementation to coordinate replication and read/write requests within a hashring using Consistent Hashring
-//! The coordinator needs to be updated when nodes join the ring, leave or left the ring
-//! The coordinator can instruct the replication as well, if the complete ring needs to be replaced (due to a deployment for example)
+// MIT License
+
+// Copyright (c) 2016 Jerome Froelich
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+//! A minimal implementation of consistent hashing as described in [Consistent
+//! Hashing and Random Trees: Distributed Caching Protocols for Relieving Hot
+//! Spots on the World Wide Web](https://www.akamai.com/es/es/multimedia/documents/technical-publication/consistent-hashing-and-random-trees-distributed-caching-protocols-for-relieving-hot-spots-on-the-world-wide-web-technical-publication.pdf).
+//! Clients can use the `HashRing` struct to add consistent hashing to their
+//! applications. `HashRing`'s API consists of three methods: `add`, `remove`,
+//! and `get` for adding a node to the ring, removing a node from the ring, and
+//! getting the node responsible for the provided key.
 //!
-//! Nodes are described by a Hash and a State
-//! The Hash is used to place the Node on the Hashring
-//! The State is used to instruct all Nodes on the hashring which replications are needed to reach a stable state
-//!     State New: A node that recently spawned and needs to sync state. It will not receive read requests. It could receive write requests though
-//!     State Operational: A node that stores all required keys and is able to process read and write requests
-//!     State Terminating: Optional state that can be used to sync state from this node other nodes, before it leaves the cluster
+//! original source: https://github.com/jeromefroe/hashring-rs
 //!
-//! Prerequisites:
-//! A cluster of nodes will receive write read and write requests only after all nodes reached the state operational.
+//! ## Example
 //!
+//! Below is a simple example of how an application might use `HashRing` to make
+//! use of consistent hashing. Since `HashRing` exposes only a minimal API clients
+//! can build other abstractions, such as virtual nodes, on top of it. The example
+//! below shows one potential implementation of virtual nodes on top of `HashRing`
+//!
+//! ``` rust,no_run
+//! extern crate hashring_coordinator;
+//!
+//! use std::net::{IpAddr, SocketAddr};
+//! use std::str::FromStr;
+//!
+//! use hashring_coordinator::HashRing;
+//!
+//! #[derive(Debug, Copy, Clone, Hash, PartialEq)]
+//! struct Node {
+//!     ip: IpAddr,
+//! }
+//!
+//! impl Node {
+//!     fn new(ip: &str) -> Self {
+//!         Node {
+//!             ip: IpAddr::from_str(&ip).unwrap(),
+//!         }
+//!     }
+//! }
+//!
+//! fn main() {
+//!     let mut ring: HashRing<Node> = HashRing::new(2, 200);
+//!
+//!     let mut nodes = vec![];
+//!     nodes.push(Node::new("127.0.0.1"));
+//!     nodes.push(Node::new("127.0.0.2"));
+//!     nodes.push(Node::new("127.0.0.3"));
+//!
+//!     for node in nodes {
+//!         ring.add(node);
+//!     }
+//!
+//!     println!("{:?}", ring.get(&"foo"));
+//!     println!("{:?}", ring.get(&"bar"));
+//!     println!("{:?}", ring.get(&"baz"));
+//! }
+//! ```
 
-use std::hash::BuildHasher;
-use std::{
-    fmt::{Debug, Display},
-    hash::Hash,
-};
+mod hashring;
 
-use hashring::{DefaultHashBuilder, HashRing};
-
-#[derive(Clone, Debug, PartialEq)]
-enum State {
-    New, //  A node that recently spawned and needs to sync state. It will not receive read requests. It could receive write requests though
-    Operational, // A node that stores all required keys and is able to process read and write requests
-    Terminating, // Optional state that can be used to sync state from this node to other nodes, before it leaves the cluster
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Node<T>
-where
-    T: Hash + Clone + Debug,
-{
-    node: T,
-    state: State,
-}
-
-impl<T> Node<T>
-where
-    T: Hash + Clone + Debug,
-{
-    fn new(node: T, state: State) -> Node<T> {
-        Node { node, state }
-    }
-}
-
-impl<T> Hash for Node<T>
-where
-    T: Hash + Clone + Debug,
-{
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.node.hash(state);
-    }
-}
-
-pub struct Config {
-    pub virtual_nodes: usize, // number of virtual nodes to create per real node
-    pub replicas: usize,      // number of replicas to create for each entry
-}
-
-#[derive(Debug)]
-pub enum Error {
-    ClusterNotOperational,
-}
-
-impl std::error::Error for Error {}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::ClusterNotOperational => write!(
-                f,
-                "the cluster is not operational yet. no read/write operations are allowed"
-            ),
-        }
-    }
-}
-
-/// Coordinator takes care of all nodes of one cluster that belong to the same deployment
-/// it can be combined with the Coordinator of another deployment to calculate actions needed to sync the state between both deployments (clusters)
-pub struct Coordinator<T>
-where
-    T: Hash + Clone + Debug,
-{
-    config: Config,
-    ring: HashRing<Node<T>>,
-    hash_builder: DefaultHashBuilder,
-    operational: bool,
-}
-
-impl<T> Coordinator<T>
-where
-    T: Hash + Clone + Debug,
-{
-    /// initiate a new Coordinator
-    pub fn new(config: Config) -> Coordinator<T> {
-        let hash_builder = DefaultHashBuilder;
-        Self {
-            config,
-            ring: HashRing::with_hasher(hash_builder.clone()),
-            hash_builder,
-            operational: false,
-        }
-    }
-
-    /// update the current status of all known nodes
-    /// it needs to contain all alive nodes
-    pub fn update(&mut self, nodes: Vec<Node<T>>) {
-        let mut ring = HashRing::default();
-        let operational = nodes.iter().all(|n| n.state == State::Operational);
-
-        // TODO: add virtual nodes instead, take config.virtual_nodes into account
-        ring.batch_add(nodes);
-
-        // TODO: publish actions based on the differences of the new and the current ring
-
-        // Update the coordinator's ring map
-        self.ring = ring;
-        self.operational = operational;
-    }
-
-    /// return the target Nodes that should contain the requested key
-    /// returns an error, if not all nodes of the cluster have been operational at least once at the same time yet
-    pub fn get(&self, key: T) -> Result<Vec<Node<T>>, Error> {
-        if !self.operational {
-            return Err(Error::ClusterNotOperational);
-        }
-
-        let targets = self
-            .ring
-            .get_with_replicas(&key, self.config.replicas)
-            .map_or(vec![], |r| r);
-
-        Ok(targets)
-    }
-
-    pub fn get_hash<H>(&self, input: &H) -> u64
-    where
-        H: Hash,
-    {
-        self.hash_builder.hash_one(input)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{Config, Coordinator, Node, State};
-
-    #[test]
-    fn new_deployment_should_not_be_operational() {
-        let config = Config {
-            virtual_nodes: 0,
-            replicas: 0,
-        };
-        let mut coordinator = Coordinator::new(config);
-
-        let node1 = Node::new("1", State::New);
-        let node2 = Node::new("2", State::New);
-        let node3 = Node::new("3", State::New);
-
-        coordinator.update(vec![node1, node2, node3]);
-
-        let target = coordinator.get("1234");
-
-        match target {
-            Err(crate::Error::ClusterNotOperational) => (),
-            _ => panic!(
-                "coordinator should throw Error::ClusterNotOperational if cluster has not been operational yet"
-            ),
-        }
-    }
-
-    #[test]
-    fn new_deployment_is_operational_if_all_nodes_are_operational() {
-        let config = Config {
-            virtual_nodes: 0,
-            replicas: 0,
-        };
-        let mut coordinator = Coordinator::new(config);
-
-        let node1 = Node::new("1", State::Operational);
-        let node2 = Node::new("2", State::Operational);
-        let node3 = Node::new("3", State::Operational);
-
-        coordinator.update(vec![node1.clone(), node2.clone(), node3.clone()]);
-
-        let targets = coordinator.get("1234");
-
-        let hash_key = coordinator.get_hash(&"1234".to_string());
-        let hash_node2 = coordinator.get_hash(&node2);
-
-        match targets {
-            Ok(targets) => {
-                assert_eq!(targets, vec![node2]);
-                assert!(hash_key < hash_node2);
-            }
-            _ => panic!("cluster should be operational"),
-        }
-    }
-}
+pub use hashring::HashRing;
