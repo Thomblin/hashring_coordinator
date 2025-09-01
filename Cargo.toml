@@ -1,6 +1,13 @@
 [package]
 name = "hashring_coordinator"
 version = "0.1.0"
+description = "Calculates hash ranges to help coordinate a hashring (using consistent hashing) for storing and finding keys, and replicating keys between nodes if the cluster changes (add, remove nodes) or between two clusters (for example during deployments) "
+authors = ["Sebastian Detert <rust-crates@elygor.de>"]
+license = "MIT"
+repository  = "https://github.com/Thomblin/hashring_coordinator"
+readme = "README.md"
+keywords = ["hashring", "consistent hashing", "coordinator", "replication", "in memory cluster"]
+categories = ["command-line-utilities", "config", "data-structures"]
 edition = "2024"
 
 [dependencies]
