@@ -6,7 +6,7 @@ authors = ["Sebastian Detert <rust-crates@elygor.de>"]
 license = "MIT"
 repository  = "https://github.com/Thomblin/hashring_coordinator"
 readme = "README.md"
-keywords = ["hashring", "consistent hashing", "coordinator", "replication", "in memory cluster"]
+keywords = ["hashring", "consistent_hashing", "coordinator", "replication", "in_memory_cluster"]
 categories = ["command-line-utilities", "config", "data-structures"]
 edition = "2024"
 
