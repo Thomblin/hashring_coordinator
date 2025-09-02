@@ -24,6 +24,29 @@ impl<T> IntoIterator for HashRing<T> {
     }
 }
 
+impl<'a, T> IntoIterator for &'a HashRing<T> {
+    type Item = &'a T;
+    type IntoIter = HashRingRefIterator<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        HashRingRefIterator {
+            ring: self.ring.iter(),
+        }
+    }
+}
+
+pub struct HashRingRefIterator<'a, T> {
+    ring: std::slice::Iter<'a, Node<T>>,
+}
+
+impl<'a, T> Iterator for HashRingRefIterator<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.ring.next().map(|node| &node.node)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::hash::Hash;

@@ -7,7 +7,7 @@ use super::{HashRing, Node};
 
 impl<T, S> HashRing<T, S>
 where
-    T: Hash + Clone + Debug,
+    T: Hash + Clone + Debug + PartialEq,
     S: BuildHasher,
 {
     /// Add `node` to the hash ring.
@@ -42,10 +42,7 @@ where
     /// returns all real nodes responsible for `key`
     ///
     /// Returns an empty array if the ring is empty
-    pub fn get<U: Hash>(&self, key: &U) -> Vec<T>
-    where
-        T: Clone + Debug + PartialEq,
-    {
+    pub fn get<U: Hash>(&self, key: &U) -> Vec<T> {
         if self.ring.is_empty() {
             return vec![];
         }
@@ -83,6 +80,23 @@ where
         U: Hash,
     {
         self.hash_builder.hash_one(input)
+    }
+
+    // returns all real nodes of this cluster
+    pub fn nodes(&self) -> Vec<T> {
+        let mut nodes = vec![];
+
+        for vnode in self.ring.iter() {
+            if !nodes.contains(&vnode.node) {
+                nodes.push(vnode.node.clone());
+            }
+
+            if nodes.len() == self.len() {
+                break;
+            }
+        }
+
+        nodes
     }
 }
 

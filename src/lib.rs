@@ -33,8 +33,10 @@
 //!
 //! Below is a simple example of how an application might use `HashRing` to make
 //! use of consistent hashing. Since `HashRing` exposes only a minimal API clients
-//! can build other abstractions, such as virtual nodes, on top of it. The example
-//! below shows one potential implementation of virtual nodes on top of `HashRing`
+//! can build other abstractions to represent a node. The example
+//! below shows some example to identify nodes that are responsible for a certain key or complete hash ranges.
+//!
+//! Take a look at the examples directory for further details like replication during deployments or after adding/removing nodes from the cluster
 //!
 //! ``` rust,no_run
 //! extern crate hashring_coordinator;

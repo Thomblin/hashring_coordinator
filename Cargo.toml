@@ -1,6 +1,6 @@
 [package]
 name = "hashring_coordinator"
-version = "0.1.0"
+version = "0.2.0"
 description = "Calculates hash ranges to help coordinate a hashring (using consistent hashing) for storing and finding keys, and replicating keys between nodes if the cluster changes (add, remove nodes) or between two clusters (for example during deployments) "
 authors = ["Sebastian Detert <rust-crates@elygor.de>"]
 license = "MIT"
@@ -12,3 +12,6 @@ edition = "2024"
 
 [dependencies]
 siphasher = "1.0.1"
+
+[dev-dependencies]
+rand = "0.9.2"

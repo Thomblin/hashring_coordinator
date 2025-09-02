@@ -136,6 +136,10 @@ where
                     let mut nodes = supply.nodes.clone();
                     nodes.retain(|f| available_nodes.contains(f));
 
+                    if nodes.contains(target) {
+                        continue;
+                    }
+
                     sources.push(Replicas {
                         hash_range: range,
                         nodes,

@@ -1,3 +1,5 @@
+//! basic example to showcase the main functions of HashRing
+
 extern crate hashring_coordinator;
 use hashring_coordinator::HashRing;
 use std::net::IpAddr;

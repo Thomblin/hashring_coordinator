@@ -1,3 +1,11 @@
+# hashring_coordinator
+
+[<img alt="github" src="https://img.shields.io/badge/github-thomblin/hashring_coordinator-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/thomblin/hashring_coordinator)
+[<img alt="crates.io" src="https://img.shields.io/crates/v/hashring_coordinator?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/hashring_coordinator)
+[<img alt="docs.rs" src="https://img.shields.io/docsrs/hashring_coordinator?logo=docs.rs&labelColor=555555" height="20">](https://docs.rs/hashring_coordinator)
+[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/Thomblin/hashring_coordinator/general.yml?branch=main&style=for-the-badge" height="20">](https://github.com/thomblin/hashring_coordinator/actions?query=branch%3Amain)
+[<img alt="audit status" src="https://img.shields.io/github/actions/workflow/status/Thomblin/hashring_coordinator/audit.yml?branch=main&style=for-the-badge&label=audit" height="20">](https://github.com/thomblin/hashring_coordinator/actions?query=branch%3Amain)
+
 A minimal implementation of consistent hashing.
 
 Clients can use the `HashRing` struct to add consistent hashing to their
@@ -12,104 +20,7 @@ This implemementation is based on the original source: <https://github.com/jerom
 
 ## Example
 
-Below is a simple example of how an application might use `HashRing` to make
-use of consistent hashing. Since `HashRing` exposes only a minimal API clients
-can build other abstractions, such as virtual nodes, on top of it. The example
-below shows one potential implementation of virtual nodes on top of `HashRing`
+Take a look at the examples directory for further details like replication during deployments or after adding/removing nodes from the cluster
 
-```rust
-extern crate hashring_coordinator;
-use hashring_coordinator::HashRing;
-use std::net::IpAddr;
-use std::str::FromStr;
-
-#[derive(Debug, Clone, Hash, PartialEq)]
-struct Node {
-    ip: IpAddr,
-}
-
-impl Node {
-    fn new(ip: &str) -> Self {
-        Node {
-            ip: IpAddr::from_str(ip).unwrap(),
-        }
-    }
-}
-
-fn main() {
-    // create a cluster with
-    //      1 replication per key (each key is stored on 2 nodes)
-    //      2 virtual nodes per real node
-    let mut ring: HashRing<Node> = HashRing::new(1, 2);
-    
-    // add some nodes to the cluster
-    let nodes = vec![
-        Node::new("127.0.0.1"),
-        Node::new("127.0.0.2"),
-        Node::new("127.0.0.3"),
-    ];
-    ring.batch_add(nodes.clone());
-
-    // return list of nodes that store the key 'foo'
-    // prints [Node { ip: 127.0.0.1 }, Node { ip: 127.0.0.3 }]
-    println!("{:?}", ring.get(&"foo"));
-
-    // return Vec<Replicas> containing hash ranges for each node of the cluster,
-    // defining which keys to store or find where
-    // the first node in each list can be considered the primary,
-    // all following nodes are the replicas for the given hashrange
-    // prints
-    // [
-    //      Replicas {
-    //          hash_range: 15043474181722320698..=18446744073709551615,
-    //          nodes: [Node { ip: 127.0.0.1 }, Node { ip: 127.0.0.3 }]
-    //      },
-    //      Replicas {
-    //          hash_range: 0..=405901753359583262,                      
-    //          nodes: [Node { ip: 127.0.0.1 }, Node { ip: 127.0.0.3 }]
-    //      },
-    //      Replicas {
-    //          hash_range: 405901753359583263..=6291554157536183168,    
-    //          nodes: [Node { ip: 127.0.0.1 }, Node { ip: 127.0.0.3 }]
-    //      },
-    //      Replicas {
-    //          hash_range: 6291554157536183169..=7034287380452369431,   
-    //          nodes: [Node { ip: 127.0.0.3 }, Node { ip: 127.0.0.2 }]
-    //      },
-    //      Replicas {
-    //          hash_range: 7034287380452369432..=8537067609243575564,   
-    //          nodes: [Node { ip: 127.0.0.2 }, Node { ip: 127.0.0.3 }]
-    //      },
-    //      Replicas {
-    //          hash_range: 8537067609243575565..=11006066246803680578,  
-    //          nodes: [Node { ip: 127.0.0.2 }, Node { ip: 127.0.0.3 }]
-    //      },
-    //      Replicas {
-    //          hash_range: 11006066246803680579..=15043474181722320697,
-     //         nodes: [Node { ip: 127.0.0.3 }, Node { ip: 127.0.0.1 }]
-     //      }
-    // ]
-    println!("{:?}", ring.get_hash_ranges());
-
-    let mut ring2 = ring.clone();
-    
-    let new_node = Node::new("127.0.0.4");
-    ring2.add(new_node.clone());
-
-    // return instructions (hashranges and nodes as given in struct Replicas)
-    // to copy/move keys from ring1 to ring2
-    // to replicate all keys to new_node that need to be stored there
-    // prints
-    //  [
-    //      Replicas {
-    //          hash_range: 11006066246803680579..=12253783648769497289,
-    //          nodes: [Node { ip: 127.0.0.3 }, Node { ip: 127.0.0.1 }]
-    //      },
-    //      Replicas {
-    //          hash_range: 7034287380452369432..=11006066246803680578,
-    //          nodes: [Node { ip: 127.0.0.2 }, Node { ip: 127.0.0.3 }]
-    //      }
-    //  ]
-    println!("{:?}", ring2.find_sources(&new_node, &ring, &nodes));
-}
-```
+* [`simple.rs`](/examples/simple.rs) - gives a brief overview of the main functions
+* [`cluster.rs`](/examples/cluster.rs) - implements a cluster and shows how to rebalance the cluster if a node as added or removed and how to synchronize all values to a completely new cluster
