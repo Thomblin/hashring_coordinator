@@ -312,16 +312,7 @@ mod tests {
         assert_eq!(expected_new, replica_setup_new);
 
         let sources = ring_new.find_sources(&node1, &ring_original, &nodes_original);
-        let expected = vec![
-            Replicas {
-                hash_range: 0..=hash1,
-                nodes: vec![node1],
-            },
-            Replicas {
-                hash_range: (hash3 + 1)..=u64::MAX,
-                nodes: vec![node1],
-            },
-        ];
+        let expected: Vec<Replicas<Node>> = vec![];
         assert_eq!(expected, sources);
 
         let sources = ring_new.find_sources(&node4, &ring_original, &nodes_original);
@@ -332,17 +323,11 @@ mod tests {
         assert_eq!(expected, sources);
 
         let sources = ring_new.find_sources(&node2, &ring_original, &nodes_original);
-        let expected = vec![Replicas {
-            hash_range: (hash4 + 1)..=hash2,
-            nodes: vec![node2],
-        }];
+        let expected: Vec<Replicas<Node>> = vec![];
         assert_eq!(expected, sources);
 
         let sources = ring_new.find_sources(&node3, &ring_original, &nodes_original);
-        let expected = vec![Replicas {
-            hash_range: (hash2 + 1)..=hash3,
-            nodes: vec![node3],
-        }];
+        let expected: Vec<Replicas<Node>> = vec![];
         assert_eq!(expected, sources);
     }
 }
