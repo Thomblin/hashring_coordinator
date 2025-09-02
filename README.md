@@ -3,7 +3,7 @@
 [<img alt="github" src="https://img.shields.io/badge/github-thomblin/hashring_coordinator-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/thomblin/hashring_coordinator)
 [<img alt="crates.io" src="https://img.shields.io/crates/v/hashring_coordinator?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/hashring_coordinator)
 [<img alt="docs.rs" src="https://img.shields.io/docsrs/hashring_coordinator?logo=docs.rs&labelColor=555555" height="20">](https://docs.rs/hashring_coordinator)
-[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/Thomblin/hashring_coordinator/general.yml?branch=main&style=for-the-badge" height="20">](https://github.com/thomblin/hashring_coordinator/actions?query=branch%3Amain)
+[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/Thomblin/hashring_coordinator/rust.yml?branch=main&style=for-the-badge" height="20">](https://github.com/thomblin/hashring_coordinator/actions?query=branch%3Amain)
 [<img alt="audit status" src="https://img.shields.io/github/actions/workflow/status/Thomblin/hashring_coordinator/audit.yml?branch=main&style=for-the-badge&label=audit" height="20">](https://github.com/thomblin/hashring_coordinator/actions?query=branch%3Amain)
 
 A minimal implementation of consistent hashing.
