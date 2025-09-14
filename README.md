@@ -18,6 +18,10 @@ applications.
 
 This implemementation is based on the original source: <https://github.com/jeromefroe/hashring-rs>
 
+## Features
+
+- *derive*: to allow serde (de)serialization of `struct Replicas`
+
 ## Example
 
 Take a look at the examples directory for further details like replication during deployments or after adding/removing nodes from the cluster
