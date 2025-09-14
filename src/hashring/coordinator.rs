@@ -3,6 +3,9 @@ use std::fmt::Debug;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::RangeInclusive;
 
+#[cfg(feature = "derive")]
+use serde::{Deserialize, Serialize};
+
 use super::HashRing;
 
 /// Replicas contains a hashrange and all nodes that store keys within the given range
@@ -11,6 +14,7 @@ use super::HashRing;
 /// * `hash_range` - range of hashes that are stored on the given nodes. Careful: Multiple hashranges might apply to each node. You need to consider all given Replicas structs
 /// * `nodes` - all nodes that store keys with a hash in hash_range
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "derive", derive(Serialize, Deserialize))]
 pub struct Replicas<T> {
     pub hash_range: RangeInclusive<u64>,
     pub nodes: Vec<T>,

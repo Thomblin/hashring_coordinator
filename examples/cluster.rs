@@ -344,7 +344,7 @@ impl Coordinator {
                     if let Some(target_node) = self.nodes.get_mut(&target_vnode.ip) {
                         // copy all values to target_node
                         for (key, value) in values {
-                            target_node.post(key.clone(), value.clone())
+                            target_node.post(key, value)
                         }
                     }
                 }
