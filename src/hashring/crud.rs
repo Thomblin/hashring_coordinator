@@ -19,7 +19,7 @@ where
     /// adds a real node represented by X virtual nodes to the hash ring
     fn add_virtual_nodes(&mut self, node: T) {
         for id in 0..self.vnodes {
-            let key = self.get_hash((&node, id));
+            let key = self.get_hash(&(&node, id));
             self.ring.push(Node::new(key, node.clone(), id)); // TODO: avoid duplicates
         }
     }
@@ -75,7 +75,7 @@ where
     }
 
     /// returns the hash for a given key or node (as used in this HashRing)
-    pub fn get_hash<U>(&self, input: U) -> u64
+    pub fn get_hash<U>(&self, input: &U) -> u64
     where
         U: Hash,
     {

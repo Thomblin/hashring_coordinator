@@ -252,13 +252,13 @@ mod tests {
         let mut ring_original = HashRing::new(0, 1);
         ring_original.batch_add(nodes_original.clone());
 
-        let hash1 = ring_original.get_hash((&node1, 0_usize));
+        let hash1 = ring_original.get_hash(&(&node1, 0_usize));
         assert_eq!(1093046220658055553, hash1);
-        let hash2 = ring_original.get_hash((&node2, 0_usize));
+        let hash2 = ring_original.get_hash(&(&node2, 0_usize));
         assert_eq!(7508079630756128442, hash2);
-        let hash3 = ring_original.get_hash((&node3, 0_usize));
+        let hash3 = ring_original.get_hash(&(&node3, 0_usize));
         assert_eq!(12322253174093194230, hash3);
-        let hash4 = ring_original.get_hash((&node4, 0_usize));
+        let hash4 = ring_original.get_hash(&(&node4, 0_usize));
         assert_eq!(7061776985767999842, hash4);
 
         let nodes_new = vec![node1, node2, node3, node4];
