@@ -1,22 +1,34 @@
 [package]
 name = "hashring_coordinator"
-version = "0.3.1"
+version = "0.3.2"
 description = "Calculates hash ranges to help coordinate a hashring (using consistent hashing) for storing and finding keys, and replicating keys between nodes if the cluster changes (add, remove nodes) or between two clusters (for example during deployments) "
 authors = ["Sebastian Detert <rust-crates@elygor.de>"]
 license = "MIT"
-repository  = "https://github.com/Thomblin/hashring_coordinator"
+repository = "https://github.com/Thomblin/hashring_coordinator"
 readme = "README.md"
-keywords = ["hashring", "consistent_hashing", "coordinator", "replication", "in_memory_cluster"]
-categories = ["algorithms", "command-line-utilities", "config", "data-structures", "database-implementations"]
+keywords = [
+    "hashring",
+    "consistent_hashing",
+    "coordinator",
+    "replication",
+    "in_memory_cluster",
+]
+categories = [
+    "algorithms",
+    "command-line-utilities",
+    "config",
+    "data-structures",
+    "database-implementations",
+]
 edition = "2024"
 
 [dependencies]
 siphasher = "1.0.1"
-serde = { version = "1.0", features = ["derive"], optional = true}
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 rand = "0.9.2"
-serde_json = { version = "1.0.145"}
+serde_json = { version = "1.0.145" }
 
 [features]
 derive = ["serde"]
