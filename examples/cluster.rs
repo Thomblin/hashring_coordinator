@@ -354,7 +354,7 @@ impl Coordinator {
 
     /// synchronize entries from another cluster into this cluster
     fn synchronize(&mut self, from: &Coordinator) {
-        for target_vnode in &self.hashring {
+        for target_vnode in &self.hashring.nodes() {
             let instructions =
                 self.hashring
                     .find_sources(target_vnode, &from.hashring, &from.hashring.nodes());
