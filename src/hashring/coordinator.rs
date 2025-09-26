@@ -25,6 +25,13 @@ where
     T: Hash + Clone + Debug + PartialEq,
 {
     pub fn get_hash_ranges(&self) -> Vec<Replicas<T>> {
+        if self.len() == 1 {
+            return vec![Replicas {
+                hash_range: 0..=u64::MAX,
+                nodes: vec![self.ring.first().unwrap().node.clone()],
+            }];
+        }
+
         let mut replication_setup = vec![];
 
         let mut left = match self.ring.last() {
@@ -239,6 +246,43 @@ mod tests {
         fn hash<H: Hasher>(&self, s: &mut H) {
             (self.addr).hash(s)
         }
+    }
+
+    #[test]
+    fn hash_ranges_find_sources_minimal() {
+        let node1 = Node::new("127.0.0.1"); // @1093046220658055553
+        let node2 = Node::new("127.0.0.2"); // @7508079630756128442
+
+        let mut ring_original = HashRing::new(0, 1);
+        ring_original.add(node2);
+
+        let mut ring_new = HashRing::new(0, 1);
+        ring_new.add(node1);
+
+        let ring_original_hashrange = ring_original.get_hash_ranges();
+
+        let expected_original = vec![Replicas {
+            hash_range: 0..=u64::MAX,
+            nodes: vec![node2],
+        }];
+
+        assert_eq!(expected_original, ring_original_hashrange);
+
+        let ring_new_hashrange = ring_new.get_hash_ranges();
+
+        let expected_new = vec![Replicas {
+            hash_range: 0..=u64::MAX,
+            nodes: vec![node1],
+        }];
+
+        assert_eq!(expected_new, ring_new_hashrange);
+
+        let sources = ring_new.find_sources(&node1, &ring_original, &[node2]);
+        let expected: Vec<Replicas<Node>> = vec![Replicas {
+            hash_range: 0..=u64::MAX,
+            nodes: vec![node2],
+        }];
+        assert_eq!(expected, sources);
     }
 
     #[test]
