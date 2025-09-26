@@ -198,7 +198,7 @@ where
         combined
     }
 
-    fn hash_nodes(&self, nodes: &Vec<T>) -> u64 {
+    pub fn hash_nodes(&self, nodes: &Vec<T>) -> u64 {
         let mut hasher = self.hash_builder.build_hasher();
         for node in nodes {
             node.hash(&mut hasher);
