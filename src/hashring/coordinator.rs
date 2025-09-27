@@ -64,7 +64,8 @@ where
         replication_setup
     }
 
-    /// for given node: Node calculate all available source Nodes that can provide keys which need to be stored on the given node
+    /// for given node: Node calculate all available source Nodes that can provide keys which need to be stored on the given node (after a change of the given cluster)
+    /// for general replication instructions within the cluster, use fn get_hash_ranges()
     /// available nodes provides all nodes that can be used to replicate keys from
     /// this covers different scenarios:
     ///
@@ -223,12 +224,12 @@ fn intersect<T: Ord + Copy>(
 
 #[cfg(test)]
 mod tests {
+    use crate::hashring::HashRing;
+    use crate::hashring::coordinator::Replicas;
+    use pretty_assertions::assert_eq;
     use std::hash::{Hash, Hasher};
     use std::net::Ipv4Addr;
     use std::str::FromStr;
-
-    use crate::hashring::HashRing;
-    use crate::hashring::coordinator::Replicas;
 
     #[derive(Debug, Copy, Clone, PartialEq)]
     struct Node {
@@ -367,6 +368,121 @@ mod tests {
         let expected = vec![Replicas {
             hash_range: (hash1 + 1)..=hash4,
             nodes: vec![node2],
+        }];
+        assert_eq!(expected, sources);
+
+        let sources = ring_new.find_sources(&node2, &ring_original, &nodes_original);
+        let expected: Vec<Replicas<Node>> = vec![];
+        assert_eq!(expected, sources);
+
+        let sources = ring_new.find_sources(&node3, &ring_original, &nodes_original);
+        let expected: Vec<Replicas<Node>> = vec![];
+        assert_eq!(expected, sources);
+    }
+
+    #[test]
+    fn hash_ranges_should_be_calculated_correctly_with_replicas() {
+        let node1 = Node::new("127.0.0.1"); // id = 0  @1093046220658055553, id = 1 @10619849754955980960
+        let node2 = Node::new("127.0.0.2"); // id = 0  @7508079630756128442, id = 1  @7110299084231520957
+        let node3 = Node::new("127.0.0.3"); // id = 0 @12322253174093194230, id = 1    @24307670534837389
+        let node4 = Node::new("127.0.0.4"); // id = 0 @7061776985767999842,  id = 1  @1807640587661881848
+
+        let nodes_original = vec![node1, node2, node3];
+        let mut ring_original = HashRing::new(1, 2);
+        ring_original.batch_add(nodes_original.clone());
+
+        let hash3_1 = ring_original.get_hash(&(&node3, 1_usize));
+        assert_eq!(24307670534837389, hash3_1);
+        let hash1_0 = ring_original.get_hash(&(&node1, 0_usize));
+        assert_eq!(1093046220658055553, hash1_0);
+        let hash2_1 = ring_original.get_hash(&(&node2, 1_usize));
+        assert_eq!(7110299084231520957, hash2_1);
+        let hash2_0 = ring_original.get_hash(&(&node2, 0_usize));
+        assert_eq!(7508079630756128442, hash2_0);
+        let hash1_1 = ring_original.get_hash(&(&node1, 1_usize));
+        assert_eq!(10619849754955980960, hash1_1);
+        let hash3_0 = ring_original.get_hash(&(&node3, 0_usize));
+        assert_eq!(12322253174093194230, hash3_0);
+
+        let hash4_1 = ring_original.get_hash(&(&node4, 1_usize));
+        assert_eq!(1807640587661881848, hash4_1);
+        let hash4_0 = ring_original.get_hash(&(&node4, 0_usize));
+        assert_eq!(7061776985767999842, hash4_0);
+
+        let nodes_new = vec![node1, node2, node3, node4];
+        let mut ring_new = HashRing::new(0, 1);
+        ring_new.batch_add(nodes_new.clone());
+
+        let replica_setup_original = ring_original.get_hash_ranges();
+
+        let expected_original = vec![
+            Replicas {
+                hash_range: (hash3_0 + 1)..=u64::MAX,
+                nodes: vec![node3, node1],
+            },
+            Replicas {
+                hash_range: 0..=hash3_1,
+                nodes: vec![node3, node1],
+            },
+            Replicas {
+                hash_range: (hash3_1 + 1)..=hash1_0,
+                nodes: vec![node1, node2],
+            },
+            Replicas {
+                hash_range: (hash1_0 + 1)..=hash2_1,
+                nodes: vec![node2, node1],
+            },
+            Replicas {
+                hash_range: (hash2_1 + 1)..=hash2_0,
+                nodes: vec![node2, node1],
+            },
+            Replicas {
+                hash_range: (hash2_0 + 1)..=hash1_1,
+                nodes: vec![node1, node3],
+            },
+            Replicas {
+                hash_range: (hash1_1 + 1)..=hash3_0,
+                nodes: vec![node3, node1],
+            },
+        ];
+
+        assert_eq!(expected_original, replica_setup_original);
+
+        let replica_setup_new = ring_new.get_hash_ranges();
+
+        let expected_new = vec![
+            Replicas {
+                hash_range: (hash3_0 + 1)..=u64::MAX,
+                nodes: vec![node1],
+            },
+            Replicas {
+                hash_range: 0..=hash1_0,
+                nodes: vec![node1],
+            },
+            Replicas {
+                hash_range: (hash1_0 + 1)..=hash4_0,
+                nodes: vec![node4],
+            },
+            Replicas {
+                hash_range: (hash4_0 + 1)..=hash2_0,
+                nodes: vec![node2],
+            },
+            Replicas {
+                hash_range: (hash2_0 + 1)..=hash3_0,
+                nodes: vec![node3],
+            },
+        ];
+
+        assert_eq!(expected_new, replica_setup_new);
+
+        let sources = ring_new.find_sources(&node1, &ring_original, &nodes_original);
+        let expected: Vec<Replicas<Node>> = vec![];
+        assert_eq!(expected, sources);
+
+        let sources = ring_new.find_sources(&node4, &ring_original, &nodes_original);
+        let expected = vec![Replicas {
+            hash_range: (hash1_0 + 1)..=hash4_0,
+            nodes: vec![node2, node1],
         }];
         assert_eq!(expected, sources);
 
