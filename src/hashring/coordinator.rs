@@ -163,7 +163,7 @@ where
         self.merge_replicas(sources)
     }
 
-    fn merge_replicas(&self, mut replicas: Vec<Replicas<T>>) -> Vec<Replicas<T>> {
+    pub fn merge_replicas(&self, mut replicas: Vec<Replicas<T>>) -> Vec<Replicas<T>> {
         replicas.sort_by(|a, b| a.hash_range.start().cmp(b.hash_range.start()));
 
         let mut replica_sets: HashMap<u64, Vec<Replicas<T>>> = HashMap::new();
