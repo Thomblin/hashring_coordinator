@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "hashring_coordinator"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "pretty_assertions",
  "rand",
