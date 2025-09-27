@@ -163,6 +163,7 @@ where
         self.merge_replicas(sources)
     }
 
+    /// merge hashranges together, if the hashrange touch and all affected nodes are identical
     pub fn merge_replicas(&self, mut replicas: Vec<Replicas<T>>) -> Vec<Replicas<T>> {
         replicas.sort_by(|a, b| a.hash_range.start().cmp(b.hash_range.start()));
 
